@@ -9,15 +9,16 @@ const steps = [
   { id: AppStep.UPLOAD, label: '업로드' },
   { id: AppStep.REFINE, label: '보완' },
   { id: AppStep.RESULT, label: '검토' },
+  { id: AppStep.PRESENTATION, label: '슬라이드' },
 ];
 
 const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => {
   const getStepStatus = (stepId: AppStep) => {
-    const stepOrder = [AppStep.UPLOAD, AppStep.ANALYZING, AppStep.REFINE, AppStep.GENERATING, AppStep.RESULT];
     let currentVisualIndex = 0;
+    if (currentStep === AppStep.ANALYZING) currentVisualIndex = 0;
     if (currentStep === AppStep.REFINE || currentStep === AppStep.GENERATING) currentVisualIndex = 1;
     if (currentStep === AppStep.RESULT) currentVisualIndex = 2;
-    if (currentStep === AppStep.ANALYZING) currentVisualIndex = 0;
+    if (currentStep === AppStep.SLIDE_GENERATING || currentStep === AppStep.PRESENTATION) currentVisualIndex = 3;
 
     const stepIndex = steps.findIndex(s => s.id === stepId);
     

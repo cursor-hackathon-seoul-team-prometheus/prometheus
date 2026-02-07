@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AppStep, Question, Answer, SavedLecture } from './types';
-import { analyzeSyllabus, generateLectureMaterial } from './services/claudeService';
+import { analyzeSyllabus, generateLectureMaterial, generateHTMLSlides } from './services/claudeService';
 import StepIndicator from './components/StepIndicator';
 import FileUpload from './components/FileUpload';
 import RefinementForm from './components/RefinementForm';
@@ -15,6 +15,7 @@ const App: React.FC = () => {
   const [syllabusText, setSyllabusText] = useState<string>('');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [finalContent, setFinalContent] = useState<string>('');
+  const [htmlSlides, setHtmlSlides] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [savedLectures, setSavedLectures] = useState<SavedLecture[]>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -69,18 +70,25 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSaveLecture = (content: string) => {
+  const handleSaveLecture = (content: string, slides?: string[]) => {
     const titleMatch = content.match(/^# (.*)/);
-    const title = titleMatch ? titleMatch[1].trim() : "Untitled Lecture";
+    const title = titleMatch ? titleMatch[1].trim() : "제목 없는 강의";
     
     const newLecture: SavedLecture = {
       id: crypto.randomUUID(),
       title,
       content,
+      htmlSlides: slides,
       createdAt: Date.now()
     };
     
     setSavedLectures(prev => [newLecture, ...prev]);
+  };
+
+  const handleSaveSlides = () => {
+    if (htmlSlides.length > 0 && finalContent) {
+      handleSaveLecture(finalContent, htmlSlides);
+    }
   };
 
   const handleDeleteLecture = (id: string) => {
@@ -91,22 +99,48 @@ const App: React.FC = () => {
 
   const handleSelectLecture = (lecture: SavedLecture) => {
     setFinalContent(lecture.content);
+    if (lecture.htmlSlides && lecture.htmlSlides.length > 0) {
+      setHtmlSlides(lecture.htmlSlides);
+      setStep(AppStep.PRESENTATION);
+    } else {
+      setStep(AppStep.RESULT);
+    }
+  };
+
+  const handleEditLecture = (lecture: SavedLecture) => {
+    setFinalContent(lecture.content);
+    if (lecture.htmlSlides) {
+      setHtmlSlides(lecture.htmlSlides);
+    }
     setStep(AppStep.RESULT);
   };
 
-  const handleStartPresentation = (content: string) => {
+  const handleSlideGeneration = async (content: string) => {
     setFinalContent(content);
-    setStep(AppStep.PRESENTATION);
+    setLoading(true);
+    setStep(AppStep.SLIDE_GENERATING);
+
+    try {
+      const slides = await generateHTMLSlides(content);
+      setHtmlSlides(slides);
+      setStep(AppStep.PRESENTATION);
+    } catch (error) {
+      alert("슬라이드 생성 중 오류가 발생했습니다.");
+      setStep(AppStep.RESULT);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleReset = () => {
     setSyllabusText('');
     setQuestions([]);
     setFinalContent('');
+    setHtmlSlides([]);
     setStep(AppStep.HOME);
   };
 
-  const isWizardStep = [AppStep.UPLOAD, AppStep.ANALYZING, AppStep.REFINE, AppStep.GENERATING, AppStep.RESULT].includes(step);
+  const isWizardStep = [AppStep.UPLOAD, AppStep.ANALYZING, AppStep.REFINE, AppStep.GENERATING, AppStep.RESULT, AppStep.SLIDE_GENERATING].includes(step);
 
   return (
     <div className={`min-h-screen flex flex-col ${step === AppStep.PRESENTATION ? 'overflow-hidden' : 'bg-[#fafaf9]'}`}>
@@ -152,6 +186,7 @@ const App: React.FC = () => {
               savedLectures={savedLectures} 
               onStartNew={() => setStep(AppStep.UPLOAD)} 
               onSelectLecture={handleSelectLecture}
+              onEditLecture={handleEditLecture}
               onDeleteLecture={handleDeleteLecture}
             />
           )}
@@ -172,13 +207,26 @@ const App: React.FC = () => {
             <ResultView 
               content={finalContent} 
               onReset={handleReset} 
-              onStartPresentation={handleStartPresentation} 
+              onGenerateSlides={handleSlideGeneration} 
               onSave={handleSaveLecture}
             />
           )}
 
+          {step === AppStep.SLIDE_GENERATING && (
+            <div className="flex flex-col items-center justify-center py-32 animate-in fade-in duration-500">
+              <div className="relative mb-8">
+                <div className="w-20 h-20 border-4 border-stone-200 border-t-orange-500 rounded-full animate-spin"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-3 h-3 bg-orange-500 rounded-full animate-ping"></div>
+                </div>
+              </div>
+              <h3 className="text-2xl font-extrabold text-stone-800 mb-3 tracking-tight">슬라이드를 생성하고 있습니다</h3>
+              <p className="text-stone-500 font-medium text-center max-w-md">AI가 강의 자료를 분석하여 시각적으로 최적화된 프레젠테이션 슬라이드를 제작하고 있습니다...</p>
+            </div>
+          )}
+
           {step === AppStep.PRESENTATION && (
-            <PresentationView content={finalContent} onExit={() => setStep(AppStep.RESULT)} />
+            <PresentationView slides={htmlSlides} onExit={() => setStep(AppStep.RESULT)} onSave={handleSaveSlides} />
           )}
         </div>
       </main>

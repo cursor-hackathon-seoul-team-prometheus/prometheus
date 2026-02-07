@@ -5,6 +5,7 @@ export enum AppStep {
   REFINE = 'REFINE',
   GENERATING = 'GENERATING',
   RESULT = 'RESULT',
+  SLIDE_GENERATING = 'SLIDE_GENERATING',
   PRESENTATION = 'PRESENTATION'
 }
 
@@ -32,5 +33,6 @@ export interface SavedLecture {
   id: string;
   title: string;
   content: string;
+  htmlSlides?: string[];
   createdAt: number;
 }

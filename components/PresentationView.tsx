@@ -1,111 +1,49 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 interface PresentationViewProps {
-  content: string;
+  slides: string[];
   onExit: () => void;
+  onSave?: () => void;
 }
 
-const parseSlides = (markdown: string): string[] => {
-  if (!markdown) return [];
-  const rawSlides = markdown.split(/(?=^# )/gm);
-  return rawSlides.filter(s => s.trim().length > 0);
-};
-
-const renderSlideMarkdown = (text: string) => {
-  if (!text) return '';
-
-  // Process lines individually for better control
-  const lines = text.split('\n');
-  let html = '';
-  let inBulletGroup = false;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    // H1 title
-    if (/^# (.*)$/.test(line)) {
-      if (inBulletGroup) { html += '</div>'; inBulletGroup = false; }
-      html += line.replace(/^# (.*)$/, '<h1>$1</h1>');
-      continue;
-    }
-
-    // H2 → pill badge
-    if (/^## (.*)$/.test(line)) {
-      if (inBulletGroup) { html += '</div>'; inBulletGroup = false; }
-      html += line.replace(/^## (.*)$/, '<h2>$1</h2>');
-      continue;
-    }
-
-    // H3 → subtitle
-    if (/^### (.*)$/.test(line)) {
-      if (inBulletGroup) { html += '</div>'; inBulletGroup = false; }
-      html += line.replace(/^### (.*)$/, '<h3>$1</h3>');
-      continue;
-    }
-
-    // Speaker notes → hidden
-    if (/^> (.*)$/.test(line)) {
-      continue;
-    }
-
-    // Bullet items
-    if (/^- (.*)$/.test(line)) {
-      if (!inBulletGroup) {
-        html += '<div class="slide-bullets">';
-        inBulletGroup = true;
-      } else {
-        html += '<hr class="bullet-divider" />';
-      }
-      const content = line.replace(/^- (.*)$/, '$1')
-        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-      html += `<div class="slide-bullet">${content}</div>`;
-      continue;
-    }
-
-    // Empty line
-    if (line.trim() === '') {
-      if (inBulletGroup) { html += '</div>'; inBulletGroup = false; }
-      continue;
-    }
-
-    // Regular paragraph
-    if (inBulletGroup) { html += '</div>'; inBulletGroup = false; }
-    const processed = line.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-    html += `<p>${processed}</p>`;
-  }
-
-  if (inBulletGroup) html += '</div>';
-  return html;
-};
-
-const PresentationView: React.FC<PresentationViewProps> = ({ content, onExit }) => {
-  const [slides, setSlides] = useState<string[]>([]);
+const PresentationView: React.FC<PresentationViewProps> = ({ slides, onExit, onSave }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isSaved, setIsSaved] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const slideRef = useRef<HTMLDivElement>(null);
 
+  // Apply Prism.js syntax highlighting after each slide change
   useEffect(() => {
-    const parsed = parseSlides(content);
-    setSlides(parsed);
-    setCurrentIndex(0);
-  }, [content]);
+    if (slideRef.current && (window as any).Prism) {
+      (window as any).Prism.highlightAllUnder(slideRef.current);
+    }
+  }, [currentIndex, slides]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' || e.key === ' ') {
-        setCurrentIndex(prev => Math.min(prev + 1, Math.max(0, slides.length - 1)));
-      }
-      if (e.key === 'ArrowLeft') {
-        setCurrentIndex(prev => Math.max(prev - 1, 0));
-      }
-      if (e.key === 'Escape') onExit();
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') {
+      setCurrentIndex(prev => Math.min(prev + 1, slides.length - 1));
+    }
+    if (e.key === 'ArrowLeft') {
+      setCurrentIndex(prev => Math.max(prev - 1, 0));
+    }
+    if (e.key === 'Escape') onExit();
   }, [slides.length, onExit]);
 
-  const handleNext = () => setCurrentIndex(prev => Math.min(prev + 1, Math.max(0, slides.length - 1)));
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
+  const handleNext = () => setCurrentIndex(prev => Math.min(prev + 1, slides.length - 1));
   const handlePrev = () => setCurrentIndex(prev => Math.max(prev - 1, 0));
+
+  const handleSave = () => {
+    if (onSave) {
+      onSave();
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 3000);
+    }
+  };
 
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
@@ -137,16 +75,14 @@ const PresentationView: React.FC<PresentationViewProps> = ({ content, onExit }) 
       />
 
       {/* Slide content */}
-      <div className="flex-1 flex items-center px-16 py-20">
+      <div className="flex-1 flex items-center justify-center px-8 sm:px-16 py-12 overflow-auto">
         <div
+          ref={slideRef}
           key={currentIndex}
-          className="w-full max-w-6xl presentation-markdown"
+          className="w-full max-w-6xl slide-html"
           style={{ animation: 'fadeSlideIn 0.4s ease-out' }}
-        >
-          {slides[currentIndex] && (
-            <div dangerouslySetInnerHTML={{ __html: renderSlideMarkdown(slides[currentIndex]) }} />
-          )}
-        </div>
+          dangerouslySetInnerHTML={{ __html: slides[currentIndex] || '' }}
+        />
       </div>
 
       {/* Bottom controls */}
@@ -211,6 +147,27 @@ const PresentationView: React.FC<PresentationViewProps> = ({ content, onExit }) 
           </button>
 
           <div className="w-px h-5" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }} />
+
+          {onSave && (
+            <button
+              onClick={handleSave}
+              className="p-2.5 rounded-xl transition-all"
+              style={{ color: isSaved ? '#4ade80' : '#b8b2ad' }}
+              title={isSaved ? '저장됨' : '슬라이드 저장'}
+              onMouseEnter={(e) => !isSaved && (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              {isSaved ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+              )}
+            </button>
+          )}
 
           <button
             onClick={toggleFullScreen}

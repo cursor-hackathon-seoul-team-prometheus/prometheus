@@ -204,6 +204,75 @@ export const generateLectureMaterial = async (syllabusText: string, answers: Ans
 };
 
 /**
+ * Generates HTML slides from markdown lecture content using Claude Opus.
+ */
+export const generateHTMLSlides = async (markdownContent: string): Promise<string[]> => {
+  try {
+    const prompt = `You are a world-class presentation designer. Convert the following Markdown lecture content into beautiful, professional HTML slides.
+
+**CRITICAL RULES:**
+1. Split the content into individual slides. Use exactly "<!-- SLIDE_BREAK -->" as the separator between slides (do NOT put it before the first slide or after the last slide).
+2. Each slide is a self-contained HTML fragment designed for a DARK background (#1c1917).
+3. Use Tailwind CSS classes for all styling (Tailwind CDN is loaded globally).
+4. All text must be light-colored for readability on dark backgrounds.
+5. For code blocks, use <pre class="language-XXX"><code class="language-XXX">...code...</code></pre> where XXX is the language (e.g., javascript, python, html, css, typescript, java, sql, bash). Prism.js is loaded and will handle syntax highlighting.
+6. Code inside <code> tags MUST be HTML-escaped (use &lt; for <, &gt; for >, &amp; for &, etc.)
+7. DO NOT include <html>, <head>, <body>, or <script> tags.
+8. DO NOT add any explanation. Output ONLY the HTML slides.
+9. START immediately with the first slide's HTML.
+
+**DESIGN GUIDELINES:**
+- Each slide MUST be designed for a 16:9 aspect ratio viewport. Wrap each slide in a container with: min-h-[100vh] w-full, and use flex/grid layouts to center and distribute content within this space.
+- Title slides: Use very large text (text-5xl or text-6xl), bold, centered layout with accent color highlights.
+- Content slides: Use clear hierarchy — large headings (text-3xl), sub-headings (text-xl), and well-spaced bullet points.
+- Bullet points: Use flex layouts with orange-400 accent markers (small squares or circles).
+- Code slides: Code blocks should stand out with rounded corners, subtle borders, and a slightly lighter dark background (bg-stone-800/50).
+- Use orange-400/orange-500 as the primary accent color for highlights, decorative elements, and emphasis.
+- Use white (text-white) for primary text, stone-400 for secondary text.
+- Add visual structure with borders (border-white/10), dividers, and spacing.
+- Keep each slide clean and focused — avoid cramming too much content.
+- Speaker notes (lines starting with >) should be EXCLUDED from the slides.
+- Image suggestions (italic text) should be shown as placeholder boxes with the description.
+
+**Markdown Content:**
+"""
+${markdownContent}
+"""`;
+
+    const response = await client.messages.create({
+      model: "claude-opus-4-20250514",
+      max_tokens: 16384,
+      thinking: {
+        type: "enabled",
+        budget_tokens: 4096,
+      },
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const textBlock = response.content.find((block) => block.type === "text");
+    const html = textBlock && textBlock.type === "text" ? textBlock.text : "";
+
+    if (!html) {
+      throw new Error("Empty response from Claude.");
+    }
+
+    const slides = html
+      .split("<!-- SLIDE_BREAK -->")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
+    if (slides.length === 0) {
+      throw new Error("No slides generated.");
+    }
+
+    return slides;
+  } catch (error) {
+    console.error("Error generating HTML slides:", error);
+    throw new Error("슬라이드 생성에 실패했습니다. 다시 시도해주세요.");
+  }
+};
+
+/**
  * Refines a specific slide based on user instruction.
  */
 export const refineSlideContent = async (currentSlideContent: string, instruction: string): Promise<string> => {

@@ -4,7 +4,7 @@ import { refineSlideContent } from '../services/claudeService';
 interface ResultViewProps {
   content: string;
   onReset: () => void;
-  onStartPresentation: (updatedContent: string) => void;
+  onGenerateSlides: (updatedContent: string) => void;
   onSave: (content: string) => void;
 }
 
@@ -28,7 +28,7 @@ const renderMarkdown = (text: string) => {
     .replace(/\n/gim, '<br />');
 };
 
-const ResultView: React.FC<ResultViewProps> = ({ content, onReset, onStartPresentation, onSave }) => {
+const ResultView: React.FC<ResultViewProps> = ({ content, onReset, onGenerateSlides, onSave }) => {
   const [slides, setSlides] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [instruction, setInstruction] = useState('');
@@ -125,11 +125,11 @@ const ResultView: React.FC<ResultViewProps> = ({ content, onReset, onStartPresen
             )}
           </button>
           <button 
-            onClick={() => onStartPresentation(slides.join('\n'))} 
+            onClick={() => onGenerateSlides(slides.join('\n'))} 
             className="px-8 py-3.5 bg-orange-600 text-white rounded-2xl font-bold hover:bg-orange-700 transition-all flex items-center shadow-xl shadow-orange-100 group"
           >
-            <svg className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path></svg>
-            슬라이드 발표
+            <svg className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M7 4V2m0 2a2 2 0 100 4m0-4a2 2 0 110 4m10-4V2m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-5 6a2 2 0 100 4m0-4a2 2 0 110 4m-9-8h14M5 12h14"></path></svg>
+            슬라이드 생성
           </button>
         </div>
       </div>
