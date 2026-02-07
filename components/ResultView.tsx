@@ -166,32 +166,6 @@ const ResultView: React.FC<ResultViewProps> = ({ content, onReset, onStartPresen
               )}
             </div>
 
-            <div className="px-8 py-6 bg-stone-50/80 border-t border-stone-100 flex justify-between items-center rounded-b-[2.5rem] backdrop-blur-sm">
-              <button 
-                onClick={handlePrev} 
-                disabled={currentIndex === 0} 
-                className="w-12 h-12 rounded-2xl bg-white border border-stone-200 flex items-center justify-center hover:bg-stone-50 hover:border-orange-300 disabled:opacity-30 transition-all group"
-              >
-                <svg className="w-6 h-6 text-stone-600 group-hover:text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"></path></svg>
-              </button>
-              
-              <div className="flex flex-col items-center">
-                 <span className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] mb-1">탐색</span>
-                 <div className="flex items-center space-x-2">
-                    <span className="text-xl font-extrabold text-stone-900">{currentIndex + 1}</span>
-                    <span className="text-stone-300">/</span>
-                    <span className="text-sm font-bold text-stone-400">{slides.length}</span>
-                 </div>
-              </div>
-
-              <button 
-                onClick={handleNext} 
-                disabled={currentIndex === slides.length - 1} 
-                className="w-12 h-12 rounded-2xl bg-white border border-stone-200 flex items-center justify-center hover:bg-stone-50 hover:border-orange-300 disabled:opacity-30 transition-all group"
-              >
-                <svg className="w-6 h-6 text-stone-600 group-hover:text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7"></path></svg>
-              </button>
-            </div>
           </div>
           
           <div className="flex justify-center">
@@ -203,7 +177,33 @@ const ResultView: React.FC<ResultViewProps> = ({ content, onReset, onStartPresen
         </div>
 
         {/* Side Editor Panel */}
-        <div className="lg:col-span-4 lg:sticky lg:top-32">
+        <div className="lg:col-span-4 lg:sticky lg:top-32 space-y-4">
+          {/* Slide Navigation */}
+          <div className="bg-white rounded-2xl border border-stone-200/60 card-shadow p-5 flex justify-between items-center">
+            <button 
+              onClick={handlePrev} 
+              disabled={currentIndex === 0} 
+              className="w-11 h-11 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-center hover:bg-stone-100 hover:border-orange-300 disabled:opacity-30 transition-all group"
+            >
+              <svg className="w-5 h-5 text-stone-600 group-hover:text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+            
+            <div className="flex items-center space-x-3">
+              <span className="text-xl font-extrabold text-stone-900">{currentIndex + 1}</span>
+              <span className="text-stone-300">/</span>
+              <span className="text-sm font-bold text-stone-400">{slides.length}</span>
+            </div>
+
+            <button 
+              onClick={handleNext} 
+              disabled={currentIndex === slides.length - 1} 
+              className="w-11 h-11 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-center hover:bg-stone-100 hover:border-orange-300 disabled:opacity-30 transition-all group"
+            >
+              <svg className="w-5 h-5 text-stone-600 group-hover:text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+          </div>
+
+          {/* Smart Editor */}
           <div className="bg-stone-900 rounded-[2.5rem] p-8 shadow-2xl border border-stone-800 text-white">
             <div className="flex items-center mb-8">
               <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white mr-4 shadow-lg shadow-orange-500/20">
