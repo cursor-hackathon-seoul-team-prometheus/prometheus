@@ -18,41 +18,41 @@ const HomeView: React.FC<HomeViewProps> = ({ savedLectures, onStartNew, onSelect
         
         <div className="relative z-10 max-w-2xl">
           <span className="inline-block px-4 py-1.5 bg-indigo-500/20 border border-indigo-500/30 rounded-full text-indigo-300 text-xs font-bold uppercase tracking-widest mb-6">
-            Intelligent Education Assistant
+            AI 강의 도우미
           </span>
           <h1 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight">
-            Create professional <span className="text-indigo-400">lecture materials</span> in minutes.
+            전문적인 <span className="text-indigo-400">강의 자료</span>를 몇 분 만에 완성하세요.
           </h1>
           <p className="text-slate-300 text-lg mb-10 leading-relaxed max-w-lg">
-            Upload your syllabus and let our AI handle the structuring, content generation, and slide design.
+            강의 계획서를 업로드하면 AI가 구조화, 콘텐츠 생성, 슬라이드 디자인까지 처리해 드립니다.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <button
               onClick={onStartNew}
               className="px-8 py-4 bg-white text-slate-900 rounded-2xl font-bold text-lg hover:bg-slate-100 transition-all flex items-center justify-center group shadow-xl shadow-white/10"
             >
-              Start New Project
+              새 프로젝트 시작
               <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
               </svg>
             </button>
             <button className="px-8 py-4 bg-slate-800 text-white rounded-2xl font-bold text-lg border border-slate-700 hover:bg-slate-700 transition-all">
-              Watch Demo
+              데모 보기
             </button>
           </div>
         </div>
       </section>
 
-      {/* Stats/Features area if needed, but going straight to Workspace */}
+      {/* 작업 공간 섹션 */}
       
       <section>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h3 className="text-2xl font-bold text-slate-900">Your Workspace</h3>
-            <p className="text-slate-500 text-sm mt-1">Continue working on your recently generated lectures.</p>
+            <h3 className="text-2xl font-bold text-slate-900">내 작업 공간</h3>
+            <p className="text-slate-500 text-sm mt-1">최근 생성한 강의 자료를 이어서 작업하세요.</p>
           </div>
           <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-bold uppercase">
-            {savedLectures.length} Lectures
+            {savedLectures.length}개의 강의
           </span>
         </div>
 
@@ -63,9 +63,9 @@ const HomeView: React.FC<HomeViewProps> = ({ savedLectures, onStartNew, onSelect
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
               </svg>
             </div>
-            <h4 className="text-xl font-bold text-slate-800 mb-2">No projects yet</h4>
-            <p className="text-slate-400 max-w-xs mx-auto mb-8">Ready to create your first AI-powered lecture deck?</p>
-            <button onClick={onStartNew} className="text-indigo-600 font-bold hover:underline">Start now &rarr;</button>
+            <h4 className="text-xl font-bold text-slate-800 mb-2">아직 프로젝트가 없습니다</h4>
+            <p className="text-slate-400 max-w-xs mx-auto mb-8">AI 기반 강의 자료를 처음 만들어 보시겠어요?</p>
+            <button onClick={onStartNew} className="text-indigo-600 font-bold hover:underline">지금 시작하기 &rarr;</button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -100,7 +100,7 @@ const HomeView: React.FC<HomeViewProps> = ({ savedLectures, onStartNew, onSelect
               </div>
             ))}
             
-            {/* New Project Card */}
+            {/* 새 프로젝트 카드 */}
             <div 
               onClick={onStartNew}
               className="bg-slate-50 rounded-[2rem] p-7 border-2 border-dashed border-slate-200 flex flex-col items-center justify-center group cursor-pointer hover:border-indigo-300 hover:bg-white transition-all min-h-[220px]"
@@ -108,7 +108,7 @@ const HomeView: React.FC<HomeViewProps> = ({ savedLectures, onStartNew, onSelect
               <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white shadow-sm mb-4 transition-all">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
               </div>
-              <span className="font-bold text-slate-600 group-hover:text-indigo-600">New Project</span>
+              <span className="font-bold text-slate-600 group-hover:text-indigo-600">새 프로젝트</span>
             </div>
           </div>
         )}
