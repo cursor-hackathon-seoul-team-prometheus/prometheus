@@ -6,9 +6,9 @@ interface StepIndicatorProps {
 }
 
 const steps = [
-  { id: AppStep.UPLOAD, label: 'Upload' },
-  { id: AppStep.REFINE, label: 'Refine' },
-  { id: AppStep.RESULT, label: 'Review' },
+  { id: AppStep.UPLOAD, label: '업로드' },
+  { id: AppStep.REFINE, label: '보완' },
+  { id: AppStep.RESULT, label: '검토' },
 ];
 
 const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => {
@@ -36,9 +36,9 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => {
               <div className="flex flex-col items-center group relative">
                 <div 
                   className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-bold transition-all duration-500 border-2 shadow-sm
-                    ${status === 'completed' ? 'bg-indigo-600 border-indigo-600 text-white shadow-indigo-100' : 
-                      status === 'active' ? 'bg-white border-indigo-600 text-indigo-600 scale-105' : 
-                      'bg-white border-slate-200 text-slate-400'}`}
+                    ${status === 'completed' ? 'bg-orange-600 border-orange-600 text-white shadow-orange-100' : 
+                      status === 'active' ? 'bg-white border-orange-600 text-orange-600 scale-105' : 
+                      'bg-white border-stone-200 text-stone-400'}`}
                 >
                   {status === 'completed' ? (
                     <svg className="w-6 h-6 animate-in zoom-in-50 duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
@@ -47,15 +47,15 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => {
                   )}
                 </div>
                 <div className="absolute top-14 whitespace-nowrap">
-                  <span className={`text-[10px] font-black uppercase tracking-widest ${status === 'active' ? 'text-indigo-600' : 'text-slate-400'}`}>
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${status === 'active' ? 'text-orange-600' : 'text-stone-400'}`}>
                     {step.label}
                   </span>
                 </div>
               </div>
               {index < steps.length - 1 && (
-                <div className="flex-grow mx-4 h-[2px] bg-slate-100 rounded-full relative overflow-hidden">
+                <div className="flex-grow mx-4 h-[2px] bg-stone-100 rounded-full relative overflow-hidden">
                    <div 
-                    className="absolute inset-0 bg-indigo-600 transition-all duration-700 ease-in-out origin-left"
+                    className="absolute inset-0 bg-orange-600 transition-all duration-700 ease-in-out origin-left"
                     style={{ 
                       transform: status === 'completed' ? 'scaleX(1)' : 'scaleX(0)' 
                     }}

@@ -13,16 +13,69 @@ const parseSlides = (markdown: string): string[] => {
 
 const renderSlideMarkdown = (text: string) => {
   if (!text) return '';
-  // Enhanced renderer for presentation mode
-  return text
-    .replace(/^# (.*$)/gim, '<h1 class="text-6xl font-extrabold mb-12 text-slate-900 tracking-tight leading-tight">$1</h1>')
-    .replace(/^## (.*$)/gim, '<h2 class="text-4xl font-bold mb-8 text-indigo-600 mt-12">$1</h2>')
-    .replace(/^### (.*$)/gim, '<h3 class="text-3xl font-semibold mb-6 text-slate-700 mt-8">$1</h3>')
-    .replace(/^\> (.*$)/gim, '<div class="hidden"></div>') // Hide speaker notes in presentation
-    .replace(/\*\*(.*)\*\*/gim, '<b class="font-bold text-slate-900">$1</b>')
-    .replace(/^- (.*$)/gim, '<li class="ml-12 list-none mb-6 text-3xl text-slate-600 relative before:content-[\'\'] before:absolute before:-left-8 before:top-4 before:w-3 before:h-3 before:bg-indigo-400 before:rounded-full leading-relaxed">$1</li>')
-    .replace(/<\/li>\n<li/gim, '</li><li')
-    .replace(/\n/gim, '<br />');
+
+  // Process lines individually for better control
+  const lines = text.split('\n');
+  let html = '';
+  let inBulletGroup = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // H1 title
+    if (/^# (.*)$/.test(line)) {
+      if (inBulletGroup) { html += '</div>'; inBulletGroup = false; }
+      html += line.replace(/^# (.*)$/, '<h1>$1</h1>');
+      continue;
+    }
+
+    // H2 → pill badge
+    if (/^## (.*)$/.test(line)) {
+      if (inBulletGroup) { html += '</div>'; inBulletGroup = false; }
+      html += line.replace(/^## (.*)$/, '<h2>$1</h2>');
+      continue;
+    }
+
+    // H3 → subtitle
+    if (/^### (.*)$/.test(line)) {
+      if (inBulletGroup) { html += '</div>'; inBulletGroup = false; }
+      html += line.replace(/^### (.*)$/, '<h3>$1</h3>');
+      continue;
+    }
+
+    // Speaker notes → hidden
+    if (/^> (.*)$/.test(line)) {
+      continue;
+    }
+
+    // Bullet items
+    if (/^- (.*)$/.test(line)) {
+      if (!inBulletGroup) {
+        html += '<div class="slide-bullets">';
+        inBulletGroup = true;
+      } else {
+        html += '<hr class="bullet-divider" />';
+      }
+      const content = line.replace(/^- (.*)$/, '$1')
+        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+      html += `<div class="slide-bullet">${content}</div>`;
+      continue;
+    }
+
+    // Empty line
+    if (line.trim() === '') {
+      if (inBulletGroup) { html += '</div>'; inBulletGroup = false; }
+      continue;
+    }
+
+    // Regular paragraph
+    if (inBulletGroup) { html += '</div>'; inBulletGroup = false; }
+    const processed = line.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+    html += `<p>${processed}</p>`;
+  }
+
+  if (inBulletGroup) html += '</div>';
+  return html;
 };
 
 const PresentationView: React.FC<PresentationViewProps> = ({ content, onExit }) => {
@@ -33,17 +86,23 @@ const PresentationView: React.FC<PresentationViewProps> = ({ content, onExit }) 
   useEffect(() => {
     const parsed = parseSlides(content);
     setSlides(parsed);
-    setCurrentIndex(0); // Reset index when content changes
-    
+    setCurrentIndex(0);
+  }, [content]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' || e.key === ' ') handleNext();
-      if (e.key === 'ArrowLeft') handlePrev();
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        setCurrentIndex(prev => Math.min(prev + 1, Math.max(0, slides.length - 1)));
+      }
+      if (e.key === 'ArrowLeft') {
+        setCurrentIndex(prev => Math.max(prev - 1, 0));
+      }
       if (e.key === 'Escape') onExit();
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [content]);
+  }, [slides.length, onExit]);
 
   const handleNext = () => setCurrentIndex(prev => Math.min(prev + 1, Math.max(0, slides.length - 1)));
   const handlePrev = () => setCurrentIndex(prev => Math.max(prev - 1, 0));
@@ -58,91 +117,133 @@ const PresentationView: React.FC<PresentationViewProps> = ({ content, onExit }) 
 
   if (slides.length === 0) return null;
 
+  const isFirstSlide = currentIndex === 0;
+  const isLastSlide = currentIndex === slides.length - 1;
+
   return (
-    <div 
+    <div
       ref={containerRef}
-      className="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center p-12 overflow-hidden select-none"
+      className="fixed inset-0 z-[100] flex flex-col overflow-hidden select-none"
+      style={{ backgroundColor: '#1c1917' }}
     >
-      {/* Logo in Top Right */}
-      <div className="absolute top-12 right-12 z-[110]">
-        <img 
-          src="/static/logo.jpg" 
-          alt="Logo" 
-          className="h-12 w-auto object-contain mix-blend-multiply opacity-90"
-          onError={(e) => (e.currentTarget.style.display = 'none')}
-        />
+      {/* Ambient background glow */}
+      <div
+        className="absolute -top-1/4 -right-1/4 w-3/4 h-3/4 rounded-full opacity-20 blur-[120px] pointer-events-none"
+        style={{ background: 'radial-gradient(circle, #f97316 0%, transparent 70%)' }}
+      />
+      <div
+        className="absolute -bottom-1/4 -left-1/4 w-1/2 h-1/2 rounded-full opacity-10 blur-[100px] pointer-events-none"
+        style={{ background: 'radial-gradient(circle, #f97316 0%, transparent 70%)' }}
+      />
+
+      {/* Slide content */}
+      <div className="flex-1 flex items-center px-16 py-20">
+        <div
+          key={currentIndex}
+          className="w-full max-w-6xl presentation-markdown"
+          style={{ animation: 'fadeSlideIn 0.4s ease-out' }}
+        >
+          {slides[currentIndex] && (
+            <div dangerouslySetInnerHTML={{ __html: renderSlideMarkdown(slides[currentIndex]) }} />
+          )}
+        </div>
       </div>
 
-      {/* Figma-style Background Elements */}
-      <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-indigo-50 rounded-bl-full -z-10 opacity-30 blur-3xl"></div>
-      <div className="absolute bottom-0 left-0 w-1/3 h-1/3 bg-slate-100 rounded-tr-full -z-10 opacity-40 blur-3xl"></div>
-
-      {/* Slide Content Area */}
-      <div className="w-full max-w-7xl h-full flex flex-col justify-center animate-in fade-in slide-in-from-right-4 duration-500">
-        {slides[currentIndex] && (
-          <div 
-            className="presentation-markdown prose-xl max-w-none px-12"
-            dangerouslySetInnerHTML={{ __html: renderSlideMarkdown(slides[currentIndex]) }}
-          />
-        )}
-      </div>
-
-      {/* UI Controls */}
-      <div className="absolute bottom-12 left-0 right-0 px-12 flex justify-between items-end pointer-events-none">
-        <div className="pointer-events-auto flex items-center space-x-6">
+      {/* Bottom controls */}
+      <div className="relative z-[110] px-10 pb-8 flex justify-between items-end">
+        {/* Left: slide number + branding */}
+        <div className="flex items-center gap-5">
+          <span
+            className="text-5xl font-bold leading-none"
+            style={{ color: 'rgba(255,255,255,0.08)', fontFamily: "'Space Grotesk', sans-serif" }}
+          >
+            {(currentIndex + 1).toString().padStart(2, '0')}
+          </span>
+          <div className="h-8 w-px" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }} />
           <div className="flex flex-col">
-            <span className="text-6xl font-black text-slate-100 leading-none">{(currentIndex + 1).toString().padStart(2, '0')}</span>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Slide Number</span>
-          </div>
-          <div className="h-12 w-px bg-slate-200"></div>
-          <div className="flex flex-col">
-            <span className="text-sm font-bold text-slate-900 uppercase tracking-tight">LectureGen AI</span>
-            <span className="text-xs text-slate-400">Presentation Deck</span>
+            <span className="text-sm font-bold text-white tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              강의자료 뚝딱
+            </span>
+            <span className="text-xs" style={{ color: '#57534e' }}>프레젠테이션</span>
           </div>
         </div>
 
-        <div className="pointer-events-auto flex items-center space-x-4 bg-white/80 backdrop-blur-md p-2 rounded-2xl shadow-xl border border-slate-100">
-          <button 
-            onClick={handlePrev} 
-            disabled={currentIndex === 0}
-            className="p-3 rounded-xl hover:bg-slate-50 disabled:opacity-20 transition-all text-slate-600"
+        {/* Right: nav controls */}
+        <div
+          className="flex items-center gap-3 px-3 py-2 rounded-2xl"
+          style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          <button
+            onClick={handlePrev}
+            disabled={isFirstSlide}
+            className="p-2.5 rounded-xl transition-all disabled:opacity-20"
+            style={{ color: '#b8b2ad' }}
+            onMouseEnter={(e) => !isFirstSlide && (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            </svg>
           </button>
-          
-          <div className="w-48 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-indigo-600 transition-all duration-300"
-              style={{ width: `${((currentIndex + 1) / slides.length) * 100}%` }}
-            ></div>
+
+          {/* Progress bar */}
+          <div className="w-40 h-1 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
+            <div
+              className="h-full rounded-full transition-all duration-300"
+              style={{
+                width: `${((currentIndex + 1) / slides.length) * 100}%`,
+                backgroundColor: '#f97316',
+              }}
+            />
           </div>
 
-          <button 
-            onClick={handleNext} 
-            disabled={currentIndex === slides.length - 1}
-            className="p-3 rounded-xl hover:bg-slate-50 disabled:opacity-20 transition-all text-slate-600"
+          <button
+            onClick={handleNext}
+            disabled={isLastSlide}
+            className="p-2.5 rounded-xl transition-all disabled:opacity-20"
+            style={{ color: '#b8b2ad' }}
+            onMouseEnter={(e) => !isLastSlide && (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+            </svg>
           </button>
 
-          <div className="w-px h-6 bg-slate-200 mx-2"></div>
+          <div className="w-px h-5" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }} />
 
-          <button 
+          <button
             onClick={toggleFullScreen}
-            className="p-3 rounded-xl hover:bg-slate-50 text-slate-600 transition-all"
+            className="p-2.5 rounded-xl transition-all"
+            style={{ color: '#b8b2ad' }}
             title="전체화면"
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
           </button>
 
-          <button 
+          <button
             onClick={onExit}
-            className="px-4 py-2 bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 rounded-xl text-sm font-bold transition-all"
+            className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+            style={{ color: '#b8b2ad', backgroundColor: 'rgba(255,255,255,0.06)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.15)'; e.currentTarget.style.color = '#f87171'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#b8b2ad'; }}
           >
             발표 종료
           </button>
         </div>
       </div>
+
+      {/* Inline animation keyframes */}
+      <style>{`
+        @keyframes fadeSlideIn {
+          from { opacity: 0; transform: translateX(20px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
     </div>
   );
 };

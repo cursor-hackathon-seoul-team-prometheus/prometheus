@@ -25,20 +25,20 @@ const RefinementForm: React.FC<RefinementFormProps> = ({ questions, onSubmit, is
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
+    <div className="w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-8 border border-stone-100">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-slate-800 mb-2">추가 정보가 필요합니다</h2>
-        <p className="text-slate-500">완벽한 강의 자료 생성을 위해 몇 가지 질문에 답해주세요.</p>
+        <h2 className="text-2xl font-bold text-stone-800 mb-2">추가 정보가 필요합니다</h2>
+        <p className="text-stone-500">완벽한 강의 자료 생성을 위해 몇 가지 질문에 답해주세요.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {questions.map((q) => (
-          <div key={q.id} className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-            <label className="block text-slate-800 font-semibold mb-2">
+          <div key={q.id} className="bg-stone-50 p-6 rounded-xl border border-stone-200">
+            <label className="block text-stone-800 font-semibold mb-2">
               {q.question}
             </label>
-            <p className="text-xs text-slate-500 mb-3 italic">
-              <span className="font-semibold text-indigo-500">질문 이유:</span> {q.context}
+            <p className="text-xs text-stone-500 mb-3 italic">
+              <span className="font-semibold text-orange-500">질문 이유:</span> {q.context}
             </p>
             
             {q.type === 'choice' && q.options ? (
@@ -50,8 +50,8 @@ const RefinementForm: React.FC<RefinementFormProps> = ({ questions, onSubmit, is
                     onClick={() => handleInputChange(q.id, option)}
                     className={`px-4 py-3 text-sm font-medium rounded-lg border transition-all text-left
                       ${answers[q.id] === option 
-                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' 
-                        : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50'}`}
+                        ? 'bg-orange-600 border-orange-600 text-white shadow-md' 
+                        : 'bg-white border-stone-200 text-stone-700 hover:border-orange-300 hover:bg-orange-50'}`}
                   >
                     {option}
                   </button>
@@ -61,7 +61,7 @@ const RefinementForm: React.FC<RefinementFormProps> = ({ questions, onSubmit, is
               <textarea
                 required
                 rows={2}
-                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-slate-700 text-sm"
+                className="w-full px-4 py-3 rounded-lg border border-stone-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all text-stone-700 text-sm"
                 placeholder="답변을 입력해주세요..."
                 value={answers[q.id] || ''}
                 onChange={(e) => handleInputChange(q.id, e.target.value)}
@@ -74,7 +74,7 @@ const RefinementForm: React.FC<RefinementFormProps> = ({ questions, onSubmit, is
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-indigo-500/30 flex items-center justify-center"
+            className="w-full py-4 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-300 text-white rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-orange-500/30 flex items-center justify-center"
           >
             {isLoading ? (
               <>

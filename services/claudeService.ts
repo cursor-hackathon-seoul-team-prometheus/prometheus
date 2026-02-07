@@ -1,32 +1,56 @@
-import { GoogleGenAI, Type } from "@google/genai";
-import { SyllabusAnalysis, Question, Answer } from "../types";
+import Anthropic from "@anthropic-ai/sdk";
+import { SyllabusAnalysis, Answer } from "../types";
 
-// Initialize Gemini Client
+// Initialize Claude Client
 // IMPORTANT: process.env.API_KEY is automatically injected.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const client = new Anthropic({
+  apiKey: process.env.API_KEY,
+  dangerouslyAllowBrowser: true,
+});
 
 /**
- * Extracts text from a syllabus image or PDF using Gemini's multimodal capabilities.
+ * Extracts text from a syllabus image or PDF using Claude's multimodal capabilities.
  */
 export const extractSyllabusFromFile = async (base64Data: string, mimeType: string): Promise<string> => {
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              mimeType: mimeType,
-              data: base64Data
-            }
-          },
-          {
-            text: "이 파일(이미지 또는 PDF)에 있는 강의계획서 내용을 텍스트로 추출해줘. 마크다운 형식으로 구조화해서 정리해줘. 다른 설명은 제외하고 내용만 출력해."
+    const contentBlock: Anthropic.ImageBlockParam | Anthropic.DocumentBlockParam =
+      mimeType === "application/pdf"
+        ? {
+            type: "document",
+            source: {
+              type: "base64",
+              media_type: "application/pdf",
+              data: base64Data,
+            },
           }
-        ]
-      }
+        : {
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: mimeType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+              data: base64Data,
+            },
+          };
+
+    const response = await client.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 4096,
+      messages: [
+        {
+          role: "user",
+          content: [
+            contentBlock,
+            {
+              type: "text",
+              text: "이 파일(이미지 또는 PDF)에 있는 강의계획서 내용을 텍스트로 추출해줘. 마크다운 형식으로 구조화해서 정리해줘. 다른 설명은 제외하고 내용만 출력해.",
+            },
+          ],
+        },
+      ],
     });
-    return response.text || "";
+
+    const textBlock = response.content.find((block) => block.type === "text");
+    return textBlock && textBlock.type === "text" ? textBlock.text : "";
   } catch (error) {
     console.error("Error extracting text from file:", error);
     throw new Error("파일에서 텍스트를 추출하는데 실패했습니다. 파일 형식을 확인해주세요.");
@@ -58,39 +82,59 @@ export const analyzeSyllabus = async (syllabusText: string): Promise<SyllabusAna
       """
     `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            missingInfo: { type: Type.BOOLEAN, description: "True if important details are missing, False if the syllabus is very comprehensive." },
-            summary: { type: Type.STRING, description: "A brief 1-sentence summary of the syllabus topic in Korean." },
-            questions: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  id: { type: Type.STRING },
-                  question: { type: Type.STRING, description: "The question in Korean." },
-                  context: { type: Type.STRING, description: "Brief explanation of why this info helps generate better slides, in Korean." },
-                  type: { type: Type.STRING, enum: ["text", "choice"] },
-                  options: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Options in Korean if type is choice, otherwise empty array." }
+    const response = await client.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 4096,
+      tools: [
+        {
+          name: "analyze_syllabus",
+          description: "Return the structured analysis of the syllabus including whether info is missing, a summary, and clarifying questions.",
+          input_schema: {
+            type: "object" as const,
+            properties: {
+              missingInfo: {
+                type: "boolean",
+                description: "True if important details are missing, False if the syllabus is very comprehensive.",
+              },
+              summary: {
+                type: "string",
+                description: "A brief 1-sentence summary of the syllabus topic in Korean.",
+              },
+              questions: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string" },
+                    question: { type: "string", description: "The question in Korean." },
+                    context: {
+                      type: "string",
+                      description: "Brief explanation of why this info helps generate better slides, in Korean.",
+                    },
+                    type: { type: "string", enum: ["text", "choice"] },
+                    options: {
+                      type: "array",
+                      items: { type: "string" },
+                      description: "Options in Korean if type is choice, otherwise empty array.",
+                    },
+                  },
+                  required: ["id", "question", "context", "type"],
                 },
-                required: ["id", "question", "context", "type"]
-              }
-            }
+              },
+            },
+            required: ["missingInfo", "summary", "questions"],
           },
-          required: ["missingInfo", "summary", "questions"]
-        }
-      }
+        },
+      ],
+      tool_choice: { type: "tool", name: "analyze_syllabus" },
+      messages: [{ role: "user", content: prompt }],
     });
 
-    const result = JSON.parse(response.text || "{}");
-    return result as SyllabusAnalysis;
-
+    const toolBlock = response.content.find((block) => block.type === "tool_use");
+    if (toolBlock && toolBlock.type === "tool_use") {
+      return toolBlock.input as SyllabusAnalysis;
+    }
+    throw new Error("No structured response received from Claude.");
   } catch (error) {
     console.error("Error analyzing syllabus:", error);
     throw new Error("Failed to analyze syllabus. Please try again.");
@@ -102,7 +146,7 @@ export const analyzeSyllabus = async (syllabusText: string): Promise<SyllabusAna
  */
 export const generateLectureMaterial = async (syllabusText: string, answers: Answer[]): Promise<string> => {
   try {
-    const answersText = answers.map(a => `Q: ${a.questionText}\nA: ${a.answer}`).join("\n\n");
+    const answersText = answers.map((a) => `Q: ${a.questionText}\nA: ${a.answer}`).join("\n\n");
 
     const prompt = `
       You are a world-class educational content creator. 
@@ -141,16 +185,18 @@ export const generateLectureMaterial = async (syllabusText: string, answers: Ans
       4.  **Visuals**: Suggest an image description for key slides in italic *(Image suggestion: ...)*.
     `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview", 
-      contents: prompt,
-      config: {
-        thinkingConfig: { thinkingBudget: 1024 } 
-      }
+    const response = await client.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 8192,
+      thinking: {
+        type: "enabled",
+        budget_tokens: 2048,
+      },
+      messages: [{ role: "user", content: prompt }],
     });
 
-    return response.text || "# Error generating content.";
-
+    const textBlock = response.content.find((block) => block.type === "text");
+    return textBlock && textBlock.type === "text" ? textBlock.text : "# Error generating content.";
   } catch (error) {
     console.error("Error generating material:", error);
     throw new Error("Failed to generate lecture materials.");
@@ -182,12 +228,14 @@ export const refineSlideContent = async (currentSlideContent: string, instructio
       5. START IMMEDIATELY with the slide content (e.g., # Slide Title).
     `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt
+    const response = await client.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 4096,
+      messages: [{ role: "user", content: prompt }],
     });
 
-    return response.text || currentSlideContent;
+    const textBlock = response.content.find((block) => block.type === "text");
+    return textBlock && textBlock.type === "text" ? textBlock.text : currentSlideContent;
   } catch (error) {
     console.error("Error refining slide:", error);
     throw new Error("슬라이드 수정 중 오류가 발생했습니다.");
