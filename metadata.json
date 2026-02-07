@@ -1,0 +1,5 @@
+{
+  "name": "LectureGen AI",
+  "description": "강의계획서를 분석하여 부족한 내용을 보완하고, 완성도 높은 강의 자료를 자동으로 생성해주는 지능형 SaaS 플랫폼입니다.",
+  "requestFramePermissions": []
+}
