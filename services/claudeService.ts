@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { SyllabusAnalysis, Answer } from "../types";
+import { SyllabusAnalysis, Answer, LectureInfo } from "../types";
 
 // Initialize Claude Client
 // IMPORTANT: process.env.API_KEY is automatically injected.
@@ -60,19 +60,31 @@ export const extractSyllabusFromFile = async (base64Data: string, mimeType: stri
 /**
  * Analyzes the uploaded syllabus to identify missing information.
  */
-export const analyzeSyllabus = async (syllabusText: string): Promise<SyllabusAnalysis> => {
+export const analyzeSyllabus = async (syllabusText: string, info?: LectureInfo | null): Promise<SyllabusAnalysis> => {
   try {
+    const infoBlock = info ? `
+      **Lecture Metadata (provided by user):**
+      - 기업명: ${info.companyName || '미입력'}
+      - 수업명: ${info.className || '미입력'}
+      - 대상: ${info.targetAudience || '미입력'}
+      - 주요 키워드: ${info.keywords || '미입력'}
+      - 수업시수: ${info.classHours}시간
+    ` : '';
+
     const prompt = `
-      You are an expert instructional designer. Analyze the following syllabus text.
-      Determine if there is enough information to create a high-quality, 1-hour lecture slide deck.
+      You are an expert instructional designer. Analyze the following syllabus text and lecture metadata.
+      Determine if there is enough information to create a high-quality lecture slide deck appropriate for the given class hours.
       
+      ${infoBlock}
+
       Look for missing critical details such as:
-      1. Target Audience Level (Beginner, Advanced, etc.)
+      1. Target Audience Level (Beginner, Advanced, etc.) — consider what's already provided in metadata
       2. Specific Learning Objectives (if vague)
       3. Tone of the lecture (Academic, Casual, Professional)
       4. Key constraints (Time limits, specific tools to use)
       5. Focus areas (Theory vs. Practice)
 
+      Do NOT ask about information that is already provided in the metadata above.
       If information is missing, generate 3-5 specific questions in Korean (한국어) to ask the user to clarify these details.
       Also provide the summary in Korean.
 
@@ -144,13 +156,35 @@ export const analyzeSyllabus = async (syllabusText: string): Promise<SyllabusAna
 /**
  * Generates the final lecture materials based on syllabus and user answers.
  */
-export const generateLectureMaterial = async (syllabusText: string, answers: Answer[]): Promise<string> => {
+export const generateLectureMaterial = async (syllabusText: string, answers: Answer[], info?: LectureInfo | null): Promise<string> => {
   try {
     const answersText = answers.map((a) => `Q: ${a.questionText}\nA: ${a.answer}`).join("\n\n");
 
+    const infoBlock = info ? `
+      **Lecture Metadata:**
+      - 기업명: ${info.companyName || '미입력'}
+      - 수업명: ${info.className || '미입력'}
+      - 대상: ${info.targetAudience || '미입력'}
+      - 주요 키워드: ${info.keywords || '미입력'}
+      - 수업시수: ${info.classHours}시간
+    ` : '';
+
+    const slidesGuidance = info ? `
+      **VOLUME GUIDELINE (CRITICAL):**
+      - This lecture is **${info.classHours} hour(s)** long.
+      - For a 1-hour lecture, generate approximately 15-20 slides.
+      - Scale proportionally: for ${info.classHours} hour(s), generate approximately **${Math.round(info.classHours * 17)} slides** (±3).
+      - Each slide should contain enough content to fill about 3-4 minutes of lecture time.
+      - Include breaks/활동 slides every 30-45 minutes for lectures longer than 1 hour.
+      ${info.companyName ? `- The title slide should include the company name: "${info.companyName}".` : ''}
+      ${info.className ? `- The lecture title should be: "${info.className}".` : ''}
+      ${info.keywords ? `- Make sure to thoroughly cover these key topics/keywords: ${info.keywords}.` : ''}
+      ${info.targetAudience ? `- Tailor the depth and examples to the target audience: ${info.targetAudience}.` : ''}
+    ` : '';
+
     const prompt = `
       You are a world-class educational content creator. 
-      Create a comprehensive lecture slide deck outline and content in Markdown format based on the syllabus and user clarifications.
+      Create a comprehensive lecture slide deck outline and content in Markdown format based on the syllabus, lecture metadata, and user clarifications.
       
       **IMPORTANT**: All generated content must be in **Korean** (한국어).
 
@@ -159,6 +193,8 @@ export const generateLectureMaterial = async (syllabusText: string, answers: Ans
       - DO NOT start with phrases like "제공해주신...", "요청하신...", "작성된 강의 교안입니다."
       - START IMMEDIATELY with the first slide header (# Title).
       - ONLY output the Markdown lecture content.
+
+      ${infoBlock}
 
       **Source Material:**
       Syllabus:
@@ -171,10 +207,12 @@ export const generateLectureMaterial = async (syllabusText: string, answers: Ans
       ${answersText}
       """
 
+      ${slidesGuidance}
+
       **Output Requirements:**
       1.  **Format**: Markdown. Use # for Slide Titles, ## for Main Points, - for bullets.
       2.  **Structure**:
-          *   **Title Slide**: Topic, Presenter Name placeholder.
+          *   **Title Slide**: Topic, Presenter Name placeholder${info?.companyName ? `, Company: ${info.companyName}` : ''}.
           *   **Agenda**: What will be covered.
           *   **Learning Objectives**: Clear goals.
           *   **Content Slides**: Break down the syllabus topics into logical slides. Each slide should have substantial content.

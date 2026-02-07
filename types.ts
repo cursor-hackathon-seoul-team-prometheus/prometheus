@@ -29,6 +29,14 @@ export interface Answer {
   answer: string;
 }
 
+export interface LectureInfo {
+  companyName: string;
+  className: string;
+  targetAudience: string;
+  keywords: string;
+  classHours: number;
+}
+
 export interface SavedLecture {
   id: string;
   title: string;

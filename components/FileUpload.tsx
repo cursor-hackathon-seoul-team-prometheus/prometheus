@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
+import { LectureInfo } from '../types';
 import { extractSyllabusFromFile } from '../services/claudeService';
 
 interface FileUploadProps {
-  onContentReady: (text: string) => void;
+  onContentReady: (text: string, info: LectureInfo) => void;
   isLoading: boolean;
 }
 
@@ -10,6 +11,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ onContentReady, isLoading }) =>
   const [text, setText] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [companyName, setCompanyName] = useState('');
+  const [className, setClassName] = useState('');
+  const [targetAudience, setTargetAudience] = useState('');
+  const [keywords, setKeywords] = useState('');
+  const [classHours, setClassHours] = useState<number>(1);
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
@@ -62,20 +69,107 @@ const FileUpload: React.FC<FileUploadProps> = ({ onContentReady, isLoading }) =>
       alert("최소 50자 이상의 강의계획서 내용을 입력해주세요.");
       return;
     }
-    onContentReady(text);
+    onContentReady(text, {
+      companyName,
+      className,
+      targetAudience,
+      keywords,
+      classHours,
+    });
   };
 
   const isBusy = isLoading || isExtracting;
 
+  const inputClass = "w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all text-stone-700 placeholder-stone-400 bg-stone-50/50 font-medium text-sm";
+  const labelClass = "block text-xs font-bold text-stone-500 uppercase tracking-widest mb-2";
+
   return (
     <div className="w-full max-w-3xl mx-auto space-y-8">
       <div className="text-center">
-        <h2 className="text-3xl font-extrabold text-stone-900 mb-3 tracking-tight">강의계획서 업로드</h2>
+        <h2 className="text-3xl font-extrabold text-stone-900 mb-3 tracking-tight">강의 정보 입력</h2>
         <p className="text-stone-500 max-w-md mx-auto font-medium">
-          텍스트를 붙여넣거나 문서를 업로드하여 전문적인 강의 자료를 생성하세요.
+          강의 기본 정보와 계획서를 입력하여 맞춤형 강의 자료를 생성하세요.
         </p>
       </div>
 
+      {/* 강의 메타데이터 입력 */}
+      <div className="bg-white rounded-[2rem] shadow-2xl shadow-orange-100/40 p-10 border border-stone-100">
+        <div className="flex items-center mb-8">
+          <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600 mr-4">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          </div>
+          <div>
+            <h3 className="font-extrabold text-lg text-stone-900">강의 기본 정보</h3>
+            <p className="text-xs text-stone-400 font-medium">입력된 정보가 강의 자료에 반영됩니다.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div>
+            <label className={labelClass}>기업명</label>
+            <input
+              type="text"
+              className={inputClass}
+              placeholder="예: 삼성전자"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              disabled={isBusy}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>수업명</label>
+            <input
+              type="text"
+              className={inputClass}
+              placeholder="예: 클라우드 컴퓨팅 기초"
+              value={className}
+              onChange={(e) => setClassName(e.target.value)}
+              disabled={isBusy}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>대상</label>
+            <input
+              type="text"
+              className={inputClass}
+              placeholder="예: 신입 개발자, 비전공 직무전환자"
+              value={targetAudience}
+              onChange={(e) => setTargetAudience(e.target.value)}
+              disabled={isBusy}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>수업시수</label>
+            <div className="relative">
+              <input
+                type="number"
+                min={1}
+                max={100}
+                className={inputClass + " pr-12"}
+                placeholder="1"
+                value={classHours}
+                onChange={(e) => setClassHours(Math.max(1, parseInt(e.target.value) || 1))}
+                disabled={isBusy}
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 text-sm font-bold">시간</span>
+            </div>
+          </div>
+          <div className="sm:col-span-2">
+            <label className={labelClass}>수업내용 주요 키워드</label>
+            <input
+              type="text"
+              className={inputClass}
+              placeholder="예: AWS, Docker, Kubernetes, CI/CD, 마이크로서비스"
+              value={keywords}
+              onChange={(e) => setKeywords(e.target.value)}
+              disabled={isBusy}
+            />
+            <p className="text-[11px] text-stone-400 mt-1.5 ml-1">쉼표로 구분하여 입력하세요.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* 강의계획서 내용 */}
       <div className="bg-white rounded-[2rem] shadow-2xl shadow-orange-100/40 p-10 border border-stone-100 overflow-hidden">
         <div className="relative mb-8">
           <div className="flex justify-between items-center mb-4">
@@ -90,7 +184,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onContentReady, isLoading }) =>
             </button>
           </div>
           <textarea
-            className={`w-full h-80 p-6 rounded-2xl border border-stone-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 resize-none transition-all text-stone-700 placeholder-stone-400 bg-stone-50/50 font-medium text-base leading-relaxed ${isExtracting ? 'opacity-50' : ''}`}
+            className={`w-full h-64 p-6 rounded-2xl border border-stone-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 resize-none transition-all text-stone-700 placeholder-stone-400 bg-stone-50/50 font-medium text-base leading-relaxed ${isExtracting ? 'opacity-50' : ''}`}
             placeholder="강의계획서 내용을 입력 또는 붙여넣기 하세요... (목표, 주제, 주차별 계획 등)"
             value={text}
             onChange={handleTextChange}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AppStep, Question, Answer, SavedLecture } from './types';
+import { AppStep, Question, Answer, SavedLecture, LectureInfo } from './types';
 import { analyzeSyllabus, generateLectureMaterial, generateHTMLSlides } from './services/claudeService';
 import StepIndicator from './components/StepIndicator';
 import FileUpload from './components/FileUpload';
@@ -15,6 +15,7 @@ const App: React.FC = () => {
   const [syllabusText, setSyllabusText] = useState<string>('');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [finalContent, setFinalContent] = useState<string>('');
+  const [lectureInfo, setLectureInfo] = useState<LectureInfo | null>(null);
   const [htmlSlides, setHtmlSlides] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [savedLectures, setSavedLectures] = useState<SavedLecture[]>(() => {
@@ -33,13 +34,14 @@ const App: React.FC = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(savedLectures));
   }, [savedLectures]);
 
-  const handleSyllabusUpload = async (text: string) => {
+  const handleSyllabusUpload = async (text: string, info: LectureInfo) => {
     setSyllabusText(text);
+    setLectureInfo(info);
     setLoading(true);
     setStep(AppStep.ANALYZING);
 
     try {
-      const analysis = await analyzeSyllabus(text);
+      const analysis = await analyzeSyllabus(text, info);
       if (analysis.questions && analysis.questions.length > 0) {
         setQuestions(analysis.questions);
         setStep(AppStep.REFINE);
@@ -59,7 +61,7 @@ const App: React.FC = () => {
     setStep(AppStep.GENERATING);
 
     try {
-      const content = await generateLectureMaterial(syllabusText, answers);
+      const content = await generateLectureMaterial(syllabusText, answers, lectureInfo);
       setFinalContent(content);
       setStep(AppStep.RESULT);
     } catch (error) {
@@ -136,6 +138,7 @@ const App: React.FC = () => {
     setSyllabusText('');
     setQuestions([]);
     setFinalContent('');
+    setLectureInfo(null);
     setHtmlSlides([]);
     setStep(AppStep.HOME);
   };
